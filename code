@@ -1,0 +1,773 @@
+library(readxl)
+library(lares)
+library(erer)
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(randomForest)
+library(mlbench)
+library(rpart)
+library(rpart.plot)
+library(car)
+library(corrplot)
+library(MASS)
+library(caret)
+library(viridis)
+library(gbm)
+library(JOUSBoost)
+library(e1071)
+library(xgboost)
+library(keras)
+library(SHAPforxgboost)
+library(data.table)
+library(here)
+library(shapviz)
+library(kernelshap)
+library(gt)
+library(modelsummary)
+library(stargazer)
+library(MatchIt)
+library(Matching)
+
+#### Скачивание данных ####
+
+data_july <- read_excel('/Users/krinzheniya/Documents/7 семестр/Диплом/act_july.xls')
+dim(data_july)
+str(data_july)
+
+data_avg <- read_excel('/Users/krinzheniya/Documents/7 семестр/Диплом/act_avg.xls')
+dim(data_avg)
+str(data_avg)
+
+data_sep <- read_excel('/Users/krinzheniya/Documents/7 семестр/Диплом/act_sep.xls')
+dim(data_sep)
+str(data_sep)
+
+data_oct <- read_excel('/Users/krinzheniya/Documents/7 семестр/Диплом/act_oct.xls')
+dim(data_oct)
+str(data_oct)
+
+data <- rbind(data_july, data_avg, data_sep, data_oct)
+dim(data)
+str(data)
+
+#### Перчивная обработка данных ####
+
+#меняем тип столбцов
+#на факторные переменные
+data$flg_ved <- as.factor(data$flg_ved)  
+data$group_flg <- as.factor(data$group_flg)  
+data$head_flg <- as.factor(data$head_flg)  
+data$segment_up_flg <- as.factor(data$segment_up_flg)  
+data$acquisition_flg <- as.factor(data$acquisition_flg)  
+data$wakeup_flg <- as.factor(data$wakeup_flg)  
+data$churn_flg <- as.factor(data$churn_flg)  
+data$aml_fl_flg <- as.factor(data$aml_fl_flg)
+data$up_tarif <- as.factor(data$up_tarif)
+data$down_tarif <- as.factor(data$down_tarif)
+data$rm_flg <- as.factor(data$rm_flg)
+data$pm_flg <- as.factor(data$pm_flg)
+data$cain_flg <- as.factor(data$cain_flg)
+data$down_99_7_flg <- as.numeric(data$down_99_7_flg)
+data$down_99_7_flg <- as.factor(data$down_99_7_flg)
+data$down_99_14_flg <- as.numeric(data$down_99_14_flg)
+data$down_99_14_flg <- as.factor(data$down_99_14_flg)
+data$down_99_30_flg <- as.numeric(data$down_99_30_flg)
+data$down_99_30_flg <- as.factor(data$down_99_30_flg)
+data$same_7_flg <- as.factor(data$same_7_flg)
+data$same_14_flg <- as.factor(data$same_14_flg)
+data$same_30_flg <- as.factor(data$same_30_flg)
+data$back_flg <- as.factor(data$back_flg)
+data$tarif_facor <- as.factor(data$tarif_facor)
+data$claster_factor <- as.factor(data$claster_factor)
+data$fd_factor <- as.factor(data$fd_factor)
+data$channel_factor<- as.numeric(data$channel_factor)
+data$channel_factor <- as.factor(data$channel_factor)
+data$partner_category_code <- as.factor(data$partner_category_code)
+data$segment <- as.factor(data$segment)
+data$aml_flg <- as.factor(data$aml_flg)
+
+#на количественные переменные
+data$interval_util <- as.numeric(data$interval_util)
+data$interval_open <- as.numeric(data$interval_open)  
+data$interval_open <- as.numeric(data$interval_open) 
+data$interval_aqusition <- as.numeric(data$interval_aqusition)  
+data$interval_active <- as.numeric(data$interval_active)
+data$share_product_prove <- as.numeric(data$share_product_prove)
+data$share_product_prove_month <- as.numeric(data$share_product_prove_month)  
+data$share_product_active <- as.numeric(data$share_product_active)  
+data$share_product_change <- as.numeric(data$share_product_change)  
+data$balance_amt <- as.numeric(data$balance_amt)
+data$mean_7_bal <- as.numeric(data$mean_7_bal)
+data$share_tek_max_7 <- as.numeric(data$share_tek_max_7)
+data$mean_14_bal <- as.numeric(data$mean_14_bal)
+data$share_tek_max_14 <- as.numeric(data$share_tek_max_14)
+data$mean_30_bal <- as.numeric(data$mean_30_bal)
+data$share_tek_max_30 <- as.numeric(data$share_tek_max_30)
+data$sum_out_7_trans <- as.numeric(data$sum_out_7_trans)
+data$count_out_7_trans <- as.numeric(data$count_out_7_trans)
+data$sum_in_7_trans <- as.numeric(data$sum_in_7_trans)
+data$count_in_7_trans <- as.numeric(data$count_in_7_trans)
+data$sum_7_com <- as.numeric(data$sum_7_com)
+data$sum_out_14_trans <- as.numeric(data$sum_out_14_trans)
+data$count_out_14_trans <- as.numeric(data$count_out_14_trans)
+data$sum_in_14_trans <- as.numeric(data$sum_in_14_trans)
+data$count_in_14_trans <- as.numeric(data$count_in_14_trans)
+data$sum_14_com <- as.numeric(data$sum_14_com)
+data$sum_out_30_trans <- as.numeric(data$sum_out_30_trans)
+data$count_out_30_trans <- as.numeric(data$count_out_30_trans)
+data$count_out_30_trans <- as.numeric(data$count_out_30_trans)
+data$sum_in_30_trans <- as.numeric(data$sum_in_30_trans)
+data$sum_30_com <- as.numeric(data$sum_30_com)
+data$fisrt_trans <- as.numeric(data$fisrt_trans)
+data$last_trans <- as.numeric(data$last_trans)
+data$int_last_tranc <- as.numeric(data$int_last_tranc)
+data$int_communication_rm <- as.numeric(data$int_communication_rm)
+str(data)
+#убираем перемнную которая напрямую связана с оттоком int_last_tranc и перемнную где слишком много пропусков
+#плюс на днйе прододили манипуляции в банке на момент сбора данных, то есть данные не самые качественные partner_category_code
+data <- dplyr::select(data, -int_last_tranc, -partner_category_code)
+
+sapply(data, function(x) sum(is.na(x)))
+
+dim(data)
+data <- na.omit(data)
+dim(data)
+
+data_for_sum <- data.frame(data)
+
+#stargazer(data_for_sum,summary=TRUE, type='html', out='Sum1.html')
+table(data$flg_ved)
+table(data$group_flg)
+table(data$head_flg)
+table(data$segment_up_flg)
+table(data$acquisition_flg)
+table(data$wakeup_flg)
+table(data$churn_flg)
+table(data$aml_fl_flg)
+table(data$up_tarif)
+table(data$down_tarif)
+table(data$rm_flg)
+table(data$pm_flg)
+table(data$cain_flg)
+table(data$down_99_7_flg)
+table(data$down_99_14_flg)
+table(data$down_99_30_flg)
+table(data$same_7_flg)
+table(data$same_14_flg)
+table(data$same_30_flg)
+table(data$back_flg)
+table(data$tarif_facor)
+table(data$claster_factor)
+table(data$fd_factor)
+table(data$channel_factor)
+table(data$segment)
+table(data$aml_flg)
+
+#размер выборки тестовой 1/5
+N <- round(dim(data)[1]/5)
+
+#номера элементов для теста
+set.seed(123)
+N_test <- sample(1:dim(data)[1], size = N)
+
+#формируем наборы
+data_test <- data[N_test,]
+data_train <- data[-N_test,]
+
+
+
+
+#### Логистическая регрессия ####
+#mod1 <- glm(churn_flg ~ . , data = data_train, family = binomial, x = TRUE)
+#summary(mod1)
+
+#stepAIC(mod1)
+#итог по stepAIC
+mod2 <- glm(formula = churn_flg ~ segment + segment_up_flg + tarif_facor + 
+              up_tarif + down_tarif + claster_factor + acquisition_flg + 
+              wakeup_flg + rm_flg + pm_flg + interval_active + 
+              interval_aqusition + count_product + share_product_prove + 
+              share_product_prove_month + share_product_active + share_product_change + 
+              flg_ved + cain_flg + sum_in_30_trans + sum_out_30_trans + 
+              count_in_7_trans + count_out_7_trans + mean_7_bal + down_99_14_flg + 
+              same_14_flg + int_communication_rm, family = binomial, data = data_train, 
+            x = TRUE)
+summary(mod2)
+exp(coef(mod2))-1
+
+# проверим м/к
+vif(mod2)
+# уберем sum_out_30_trans
+data_train_log <- data_train
+data_train_log$interval_active <- data_train_log$interval_active/100
+data_train_log$interval_aqusition <- data_train_log$interval_aqusition/1000
+data_train_log$sum_in_30_trans <- data_train_log$sum_in_30_trans/1000000000000
+data_train_log$count_in_7_trans <- data_train_log$count_in_7_trans/100
+data_train_log$count_out_7_trans <- data_train_log$count_out_7_trans/100
+data_train_log$mean_7_bal <- data_train_log$mean_7_bal/1000000000
+data_train_log$int_communication_rm <- data_train_log$int_communication_rm/10
+
+mod3 <- glm(formula = churn_flg ~ segment + segment_up_flg + tarif_facor + 
+              up_tarif + down_tarif + claster_factor + acquisition_flg + 
+              wakeup_flg + rm_flg + pm_flg + interval_active + 
+              interval_aqusition + count_product + share_product_prove + 
+              share_product_prove_month + share_product_active + share_product_change + 
+              flg_ved + cain_flg + sum_in_30_trans + 
+              count_in_7_trans + count_out_7_trans + mean_7_bal + down_99_14_flg + 
+              same_14_flg + int_communication_rm, family = binomial, data = data_train_log, 
+            x = TRUE)
+vif(mod3)
+summary(mod3)
+
+(exp(coef(mod3))-1)
+with(summary(mod3), 1 - deviance/null.deviance)
+
+maBina(mod3, x.mean = TRUE) #если x.mean = FALSE, то средний предельный эффект 
+
+stargazer(mod3, type="text", omit = "claster_factor",
+          column.labels=c("Логистическая регрессия"), df=FALSE, digits=3, 
+          out='Sum_log.html', out.header = TRUE)
+
+#для data_train_log
+Pr <- predict(mod3, data_train_log, type = 'response')
+Pr
+
+y <- data_train_log$churn_flg
+y_pr <- ifelse(Pr > 0.5, 1, 0)
+y_pr <- factor(y_pr)
+
+caret::confusionMatrix(y_pr, y,  positive = '1')
+mplot_conf(y, Pr)
+mplot_roc(y, Pr)
+
+#для data_test
+Pr <- predict(mod3, data_test, type = 'response')
+Pr
+
+y <- data_test$churn_flg
+y_pr <- ifelse(Pr > 0.5, 1, 0)
+y_pr <- factor(y_pr)
+
+caret::confusionMatrix(y_pr, y,  positive = '1')
+mplot_conf(y, Pr)
+mplot_roc(y, Pr)
+
+
+msummary(models=list("Логистическая регрессия" = mod3), 
+         fmt = "%.5f", 
+         gof_omit = "AIC|RMSE|Log.Lik.|BIC", align=c("lc"), output="gt", 
+         vcov="HC1", stars = c('*' = .1, '**' = .05, '***' = .01))
+
+
+
+
+#### random forest ####
+
+mod2_RF <- randomForest(churn_flg ~ . ,ntree = 183, data = data_train)
+mod2_RF
+summary(mod2_RF)
+#что важнее всего? top 15
+varImpPlot(mod2_RF,
+           sort = T,
+           n.var = 15,
+           main = "Top 15 - Variable Importance")
+
+#plot_min_depth_distribution(mod1_RF) + scale_fill_viridis(discrete = TRUE)
+
+hist(treesize(mod1_RF),
+     main = "No. of Nodes for the Trees",
+     col = "green")
+#700 и больше узлов - мб и не проблема
+
+data_train <- as.data.frame(data_train)
+#не поняла почему y от 1 до 4, если это оттек/не оттек 1/0
+?partialPlot
+partialPlot(mod2_RF, data_train, claster_factor)
+
+data_train_new <- subset(data_train, interval_active <= 400)
+partialPlot(mod2_RF, data_train_new, interval_active)
+
+data_train_new <- subset(data_train, sum_in_30_trans <= 100000)
+partialPlot(mod2_RF, data_train_new, sum_in_30_trans)
+
+data_train_new <- subset(data_train, interval_aqusition <= 500)
+partialPlot(mod2_RF, data_train_new, interval_aqusition)
+
+data_train_new <- subset(data_train, last_trans <= 100000)
+partialPlot(mod2_RF, data_train_new, last_trans)
+
+data_train_new <- subset(data_train, fisrt_trans <= 100000)
+partialPlot(mod2_RF, data_train_new, fisrt_trans)
+
+data_train_new <- subset(data_train, mean_30_bal <= 100000)
+data_train_new <- subset(data_train_new, mean_30_bal >= 0)
+partialPlot(mod2_RF, data_train_new, mean_30_bal)
+
+Pr <- predict(mod2_RF, data_test, type = 'prob')
+unique(Pr)
+
+y <- data_test$churn_flg
+unique(y)
+
+#ROC кривая
+mplot_roc(y, Pr[,2])
+
+
+Pr1 <- predict(mod2_RF, data_test, type = 'response')
+unique(Pr1)
+
+mplot_conf(y, Pr1)
+
+confusionMatrix(y, Pr1,positive = '1')
+
+
+
+
+#### Boosting2 ####
+
+xgb.model <- train(
+  churn_flg ~., data = data_train,
+  trControl = trainControl("cv", number = 5), verbosity = 0, nrounds = 10, nthread = 1)
+summary(xgb.model)
+
+
+Pr <- predict(xgb.model, data_test, type="prob")
+Pr
+data_test$pr <- Pr[,2]
+dim(data_test)
+str(data_test)
+View(data_test)
+
+y <- data_test$churn_flg
+unique(y)
+
+#ROC кривая
+mplot_roc(y, Pr[,2])
+
+y_pr <- ifelse(Pr[,2] > 0.5, 1, 0)
+y_pr <- factor(y_pr)
+
+caret::confusionMatrix(y_pr, y,  positive = '1')
+
+mplot_conf(y, y_pr)
+
+
+# для shap_values
+data_train <-  as.data.frame(data_train)
+X_pred <- data.matrix(data_train[, -1])
+dtrain <- xgboost::xgb.DMatrix(X_pred, label = data_train[, 1])
+fit <- xgboost::xgb.train(data = dtrain, trControl = trainControl("cv", number = 5), verbosity = 0, nrounds = 10, nthread = 1)
+summary(fit)
+
+data_train_scale <- data_train
+data_train_scale$sum_out_14_trans <- scale(data_train_scale$sum_out_14_trans)
+X_pred <- data.matrix(data_train_scale[, -1])
+  
+shap_values <- shap.values(fit, X_train = X_pred)
+shap_values$mean_shap_score
+#для визуализации
+shap_long <- shap.prep(shap_contrib = shap_values$shap_score, X_train = X_pred)
+shap.plot.summary(shap_long)
+
+
+
+
+
+#### Потрет оттекающиего клиенты ####
+
+data_test$pr <- Pr[,2]
+dim(data_test)
+str(data_test)
+View(data_test)
+
+data_test$group <- ifelse(data_test$pr >= 0.5, "больше",  "меньше")
+table(data_test$group)
+
+data_more <- data_test %>% filter(data_test$group == 'больше')
+dim(data_more)
+
+data_less <- data_test %>% filter(data_test$group == 'меньше')
+dim(data_less)
+
+barplot(table(data_more$claster_factor), 
+        main = "Распределение компаний по отрасли группа больше", 
+        las = 1)
+barplot(table(data_less$claster_factor), 
+        main = "Распределение компаний по отрасли группа меньше", 
+        las = 1)
+table(data_more$claster_factor)
+table(data_test$claster_factor)
+
+
+barplot(table(data_more$fd_factor), 
+        main = "Распределение компаний по ФО расположения группа больше", 
+        las = 1)
+barplot(table(data_less$fd_factor), 
+        main = "Распределение компаний по ФО расположения группа меньше", 
+        las = 1)
+table(data_more$fd_factor)
+table(data_test$fd_factor)
+
+
+barplot(table(data_more$channel_factor), 
+        main = "Распределение компаний по каналу привлечения группа больше", 
+        las = 1)
+barplot(table(data_less$channel_factor), 
+        main = "Распределение компаний по каналу привлечения группа меньше", 
+        las = 1)
+table(data_more$channel_factor)
+table(data_test$channel_factor)
+
+
+table(data_more$tarif_facor)
+table(data_test$tarif_facor)
+
+
+#H0: The The two variables are independent
+#H1: The two variables are related.
+#p-value < 0.05 отвергаем H0 => зависимы
+chisq.test(data_test$group, data_test$flg_ved)
+chisq.test(data_test$group, data_test$group_flg)
+chisq.test(data_test$group, data_test$head_flg)
+chisq.test(data_test$group, data_test$segment_up_flg)
+chisq.test(data_test$group, data_test$acquisition_flg)
+chisq.test(data_test$group, data_test$wakeup_flg)
+chisq.test(data_test$group, data_test$aml_fl_flg)
+chisq.test(data_test$group, data_test$up_tarif)
+chisq.test(data_test$group, data_test$down_tarif)
+chisq.test(data_test$group, data_test$rm_flg)
+chisq.test(data_test$group, data_test$pm_flg)
+chisq.test(data_test$group, data_test$cain_flg)
+chisq.test(data_test$group, data_test$down_99_7_flg)
+chisq.test(data_test$group, data_test$down_99_14_flg)
+chisq.test(data_test$group, data_test$down_99_30_flg)
+chisq.test(data_test$group, data_test$same_7_flg)
+chisq.test(data_test$group, data_test$same_14_flg)
+chisq.test(data_test$group, data_test$same_30_flg)
+chisq.test(data_test$group, data_test$back_flg)
+chisq.test(data_test$group, data_test$segment)
+chisq.test(data_test$group, data_test$aml_flg)
+
+table(data_more$flg_ved)/sum(table(data_more$flg_ved))
+table(data_more$group_flg)/sum(table(data_more$group_flg))
+table(data_more$head_flg)/sum(table(data_more$head_flg))
+table(data_more$segment_up_flg)/sum(table(data_more$segment_up_flg))
+table(data_more$acquisition_flg)/sum(table(data_more$acquisition_flg))
+table(data_more$wakeup_flg)/sum(table(data_more$wakeup_flg))
+table(data_more$aml_fl_flg)/sum(table(data_more$aml_fl_flg))
+table(data_more$up_tarif)/sum(table(data_more$up_tarif))
+table(data_more$down_tarif)/sum(table(data_more$down_tarif))
+table(data_more$rm_flg)/sum(table(data_more$rm_flg))
+table(data_more$pm_flg)/sum(table(data_more$pm_flg))
+table(data_more$cain_flg)/sum(table(data_more$cain_flg))
+table(data_more$down_99_7_flg)/sum(table(data_more$down_99_7_flg))
+table(data_more$down_99_14_flg)/sum(table(data_more$down_99_14_flg))
+table(data_more$down_99_30_flg)/sum(table(data_more$down_99_30_flg))
+table(data_more$same_7_flg)/sum(table(data_more$same_7_flg))
+table(data_more$same_14_flg)/sum(table(data_more$same_14_flg))
+table(data_more$same_30_flg)/sum(table(data_more$same_30_flg))
+table(data_more$back_flg)/sum(table(data_more$back_flg))
+table(data_more$segment)/sum(table(data_more$segment))
+table(data_more$aml_flg)/sum(table(data_more$aml_flg))
+
+table(data_less$flg_ved)/sum(table(data_less$flg_ved))
+table(data_less$group_flg)/sum(table(data_less$group_flg))
+table(data_less$head_flg)/sum(table(data_less$head_flg))
+table(data_less$segment_up_flg)/sum(table(data_less$segment_up_flg))
+table(data_less$acquisition_flg)/sum(table(data_less$acquisition_flg))
+table(data_less$wakeup_flg)/sum(table(data_less$wakeup_flg))
+table(data_less$aml_fl_flg)/sum(table(data_less$aml_fl_flg))
+table(data_less$up_tarif)/sum(table(data_less$up_tarif))
+table(data_less$down_tarif)/sum(table(data_less$down_tarif))
+table(data_less$rm_flg)/sum(table(data_less$rm_flg))
+table(data_less$pm_flg)/sum(table(data_less$pm_flg))
+table(data_less$cain_flg)/sum(table(data_less$cain_flg))
+table(data_less$down_99_7_flg)/sum(table(data_less$down_99_7_flg))
+table(data_less$down_99_14_flg)/sum(table(data_less$down_99_14_flg))
+table(data_less$down_99_30_flg)/sum(table(data_less$down_99_30_flg))
+table(data_less$same_7_flg)/sum(table(data_less$same_7_flg))
+table(data_less$same_14_flg)/sum(table(data_less$same_14_flg))
+table(data_less$same_30_flg)/sum(table(data_less$same_30_flg))
+table(data_less$back_flg)/sum(table(data_less$back_flg))
+table(data_less$segment)/sum(table(data_less$segment))
+table(data_less$aml_flg)/sum(table(data_less$aml_flg))
+
+#H0:a1=a2
+#H1:a1<>a2
+#p-value < 0.05 отвергаем H0 => не равны
+
+t.test(data_test$group_size ~ data_test$group, alternarive = "greater")
+t.test(data_test$interval_active ~ data_test$group, alternarive = "greater")
+t.test(data_test$interval_aqusition ~ data_test$group, alternarive = "greater")
+t.test(data_test$interval_open ~ data_test$group, alternarive = "greater")
+t.test(data_test$interval_util ~ data_test$group, alternarive = "greater")
+t.test(data_test$fisrt_trans ~ data_test$group, alternarive = "greater")
+t.test(data_test$count_product ~ data_test$group, alternarive = "greater")
+t.test(data_test$share_product_prove ~ data_test$group, alternarive = "greater")
+t.test(data_test$share_product_prove_month ~ data_test$group, alternarive = "greater")
+t.test(data_test$share_product_active ~ data_test$group, alternarive = "greater")
+t.test(data_test$share_product_change ~ data_test$group, alternarive = "greater")
+t.test(data_test$balance_amt ~ data_test$group, alternarive = "greater")
+t.test(data_test$last_trans ~ data_test$group, alternarive = "greater")
+t.test(data_test$sum_in_30_trans ~ data_test$group, alternarive = "greater")
+t.test(data_test$sum_out_30_trans ~ data_test$group, alternarive = "greater")
+t.test(data_test$sum_in_7_trans ~ data_test$group, alternarive = "greater")
+t.test(data_test$sum_out_7_trans ~ data_test$group, alternarive = "greater")
+t.test(data_test$sum_in_14_trans ~ data_test$group, alternarive = "greater")
+t.test(data_test$sum_out_14_trans ~ data_test$group, alternarive = "greater")
+t.test(data_test$count_in_30_trans ~ data_test$group, alternarive = "greater")
+t.test(data_test$count_out_30_trans ~ data_test$group, alternarive = "greater")
+t.test(data_test$count_in_7_trans ~ data_test$group, alternarive = "greater")
+t.test(data_test$count_out_7_trans ~ data_test$group, alternarive = "greater")
+t.test(data_test$count_in_14_trans ~ data_test$group, alternarive = "greater")
+t.test(data_test$count_out_14_trans ~ data_test$group, alternarive = "greater")
+t.test(data_test$sum_30_com ~ data_test$group, alternarive = "greater")
+t.test(data_test$sum_7_com ~ data_test$group, alternarive = "greater")
+t.test(data_test$sum_14_com ~ data_test$group, alternarive = "greater")
+t.test(data_test$mean_7_bal ~ data_test$group, alternarive = "greater")
+t.test(data_test$mean_14_bal ~ data_test$group, alternarive = "greater")
+t.test(data_test$mean_30_bal ~ data_test$group, alternarive = "greater")
+t.test(data_test$share_tek_max_30 ~ data_test$group, alternarive = "greater")
+t.test(data_test$share_tek_max_14 ~ data_test$group, alternarive = "greater")
+t.test(data_test$share_tek_max_7 ~ data_test$group, alternarive = "greater")
+t.test(data_test$int_communication_rm ~ data_test$group, alternarive = "greater")
+
+
+
+
+
+#### Matching ####
+
+data_m <- read_excel('/Users/krinzheniya/Documents/7 семестр/Диплом/want_churn_info-2.xls')
+View(data_m)
+dim(data_m)
+str(data_m)
+
+data_m$sum_out_14_trans <- as.numeric(data_m$sum_out_14_trans)
+data_m$sum_in_30_trans <- as.numeric(data_m$sum_in_30_trans)
+data_m$sum_in_14_trans <- as.numeric(data_m$sum_in_14_trans)
+data_m$interval_active <- as.numeric(data_m$interval_active)
+data_m$rm_flg <- as.factor(data_m$rm_flg)
+data_m$sum_out_30_trans <- as.numeric(data_m$sum_out_30_trans)
+data_m$wakeup_flg <- as.factor(data_m$wakeup_flg) 
+data_m$act_flg <- as.factor(data_m$act_flg)
+data_m$cain_flg <- as.factor(data_m$cain_flg)
+data_m$segment_flg <- as.factor(data_m$segment_flg)
+data_m$balance_amt <- as.numeric(data_m$balance_amt)
+data_m$interval_rm <- as.numeric(data_m$interval_rm)
+data_m$mean_14_bal <- as.numeric(data_m$mean_14_bal)
+data_m$segment_up_flg <- as.factor(data_m$segment_up_flg)  
+data_m$acquisition_flg <- as.factor(data_m$acquisition_flg)  
+data_m$count_out_30_trans <- as.numeric(data_m$count_out_30_trans)
+data_m$share_tek_max_30 <- as.numeric(data_m$share_tek_max_30)
+data_m$mean_30_bal <- as.numeric(data_m$mean_30_bal)
+data_m$cluster <- as.factor(data_m$cluster)
+data_m$last_trans <- as.numeric(data_m$last_trans)
+data_m$flg_inf <- as.factor(data_m$flg_inf)  
+
+data_m$interval_aqusition <- as.numeric(data_m$interval_aqusition)  
+
+
+mod_m <- matchit(flg_inf ~ . - act_flg, data = data_m, 
+               method = "nearest", 
+               distance = "mahalanobis", ratio = 1, replace = FALSE)
+summary(mod_m)
+
+#выгрузим данные
+data <- match.data(mod_m)
+dim(data)
+
+#1) вариант построим регрессию
+mod <- glm(act_flg ~ . - weights - subclass, data = data)
+summary(mod)
+
+
+
+
+#### svm ####
+
+#размер выборки тестовой для svm 1/4 от тестовой выборки, то есть 1/5 от всей выборки
+N <- round(dim(data_train)[1]/4)
+
+#номера элементов для теста
+set.seed(123)
+N_test <- sample(1:dim(data_train)[1], size = N)
+
+#формируем набор
+data_train <- data_train[N_test,]
+dim(data_train)
+
+
+data_train$churn_flg <- factor(data_train$churn_flg, labels = c("a", "b"))
+
+data <- scale(data)
+
+ctrl <- trainControl(method = "cv", number = 10, classProbs = TRUE,
+                     summaryFunction = twoClassSummary)
+mod_tune <- train(churn_flg ~ ., data = data_train, method = "svmRadial", metric = "ROC",
+                  tuneLength = 10, trControl = ctrl, preProcess = c("center", "scale"))
+
+#как проходило обучение?
+ggplot(mod_tune) + theme_light()
+mod_tune
+
+#обучаем оптимальную модель
+mod_tune$bestTune$sigma
+
+
+
+mod_6 <- svm(churn_flg ~ ., data = data_train, kernel = "radial", probability = TRUE, gamma = mod_tune$bestTune$sigma, 
+             cost = mod_tune$bestTune$C)
+
+
+Pr <- predict(mod_6, data_test, probability = TRUE)
+Pr
+Pr <- attr(Pr,"probabilities")[,2]
+Pr
+
+y <- data_test$churn_flg
+unique(y)
+
+#ROC кривая
+mplot_roc(y, Pr)
+
+y_pr <- ifelse(Pr > 0.5, 1, 0)
+y_pr <- factor(y_pr)
+y_pr
+
+caret::confusionMatrix(y_pr, y, positive = '1')
+mplot_conf(y, Pr)
+
+
+
+
+##### Жизненный цикл компаний #####
+
+data_train
+
+ggplot(data_train, aes(interval_aqusition))+
+  geom_density(alpha=0.5, fill='#8B4789')+
+  ggtitle("Распределение метрики для прогнозов на сезон 2021-2022")+
+  theme(legend.title=element_text(face="italic", size=14), plot.title=element_text(size="15", face="italic", vjust=0.5, hjust=0.1))+ 
+  xlab('Метрика')+
+  ylab('Плотность')
+
+max(data_train$interval_aqusition)
+min(data_train$interval_aqusition)
+365*5
+
+
+barplot(table(data_train$interval_aqusition), 
+        main = "Распределение компаний по кол-ву дней с момента привелчения", 
+        las = 1)
+
+data_train$period_life <- ifelse(data_train$interval_aqusition <= 182, "(0, 0.5 года]", 
+                                 ifelse(data_train$interval_aqusition > 182 & data_train$interval_aqusition <= 365, "(0.5, 1 год]", 
+                                        ifelse(data_train$interval_aqusition > 365 & data_train$interval_aqusition <= 547, "(1, 1.5 года]",
+                                            ifelse(data_train$interval_aqusition > 547 & data_train$interval_aqusition <= 730, "(1.5, 2 года]",
+                                               ifelse(data_train$interval_aqusition > 730 & data_train$interval_aqusition <= 1095, "(2, 3 года]", 
+                                                      ifelse(data_train$interval_aqusition > 1095 & data_train$interval_aqusition <= 1825, "(3, 5 лет]",
+                                                             ifelse(data_train$interval_aqusition > 1825, "(5, +∞)", NA)))))))
+
+barplot(table(data_train$period_life), 
+        main = "Распределение компаний по по принадлежности к определенному периоду", 
+        las = 1)
+
+data_train$period_life <- ifelse(data_train$interval_aqusition <= 182, 1, 
+                                 ifelse(data_train$interval_aqusition > 182 & data_train$interval_aqusition <= 365, 2, 
+                                        ifelse(data_train$interval_aqusition > 365 & data_train$interval_aqusition <= 547, 3,
+                                               ifelse(data_train$interval_aqusition > 547 & data_train$interval_aqusition <= 730, 4,
+                                                      ifelse(data_train$interval_aqusition > 730 & data_train$interval_aqusition <= 1095, 5, 
+                                                             ifelse(data_train$interval_aqusition > 1095 & data_train$interval_aqusition <= 1825, 6,
+                                                                    ifelse(data_train$interval_aqusition > 1825, 7, NA)))))))
+
+table(data_train$period_life)
+data_1 <- data_train[data_train$period_life == 1, ]
+data_2 <- data_train[data_train$period_life == 2, ]
+data_3 <- data_train[data_train$period_life == 3, ]
+data_4 <- data_train[data_train$period_life == 4, ]
+data_5 <- data_train[data_train$period_life == 5, ]
+data_6 <- data_train[data_train$period_life == 6, ]
+data_7 <- data_train[data_train$period_life == 7, ]
+
+table(data_1$churn_flg)
+table(data_2$churn_flg)
+table(data_3$churn_flg)
+table(data_4$churn_flg)
+table(data_5$churn_flg)
+table(data_6$churn_flg)
+table(data_7$churn_flg)
+
+table(data_1$segment)
+table(data_2$segment)
+table(data_3$segment)
+table(data_4$segment)
+table(data_5$segment)
+table(data_6$segment)
+table(data_7$segment)
+
+table(data_1$segment_up_flg)
+table(data_2$segment_up_flg)
+table(data_3$segment_up_flg)
+table(data_4$segment_up_flg)
+table(data_5$segment_up_flg)
+table(data_6$segment_up_flg)
+table(data_7$segment_up_flg)
+
+table(data_1$tarif_facor)
+table(data_2$tarif_facor)
+table(data_3$tarif_facor)
+table(data_4$tarif_facor)
+table(data_5$tarif_facor)
+table(data_6$tarif_facor)
+table(data_7$tarif_facor)
+
+table(data_1$group_flg)
+table(data_2$group_flg)
+table(data_3$group_flg)
+table(data_4$group_flg)
+table(data_5$group_flg)
+table(data_6$group_flg)
+table(data_7$group_flg)
+
+table(data_1$head_flg)
+table(data_2$head_flg)
+table(data_3$head_flg)
+table(data_4$head_flg)
+table(data_5$head_flg)
+table(data_6$head_flg)
+table(data_7$head_flg)
+
+table(data_1$flg_ved)
+table(data_2$flg_ved)
+table(data_3$flg_ved)
+table(data_4$flg_ved)
+table(data_5$flg_ved)
+table(data_6$flg_ved)
+table(data_7$flg_ved)
+
+mean(data_1$interval_open)
+mean(data_2$interval_open)
+mean(data_3$interval_open)
+mean(data_4$interval_open)
+mean(data_5$interval_open)
+mean(data_6$interval_open)
+mean(data_7$interval_open)
+
+mean(data_1$interval_util)
+mean(data_2$interval_util)
+mean(data_3$interval_util)
+mean(data_4$interval_util)
+mean(data_5$interval_util)
+mean(data_6$interval_util)
+mean(data_7$interval_util)
+
+mean(data_1$count_product)
+mean(data_2$count_product)
+mean(data_3$count_product)
+mean(data_4$count_product)
+mean(data_5$count_product)
+mean(data_6$count_product)
+mean(data_7$count_product)
+
